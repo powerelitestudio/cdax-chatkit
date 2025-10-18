@@ -1,10 +1,10 @@
 // app/api/create-session/route.ts
 import { NextRequest } from "next/server";
 
-// (opcional) si quieres Edge:
+// (Opcional) si quieres Edge Runtime:
 // export const runtime = "edge";
 
-// ✅ Dominios permitidos para CORS
+// ⛳ Dominios permitidos
 const ALLOWED = new Set<string>([
   "https://cartasdax.com",
   "https://www.cartasdax.com",
@@ -12,10 +12,10 @@ const ALLOWED = new Set<string>([
   "http://localhost:3000",
 ]);
 
-// Helper: responde JSON con headers CORS correctos
+// Helper: JSON + CORS siempre
 function corsJson(req: Request, body: any, status = 200) {
   const origin = req.headers.get("origin") || "";
-  const headers = new Headers({
+  const h = new Headers({
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
     "Vary": "Origin",
@@ -25,26 +25,25 @@ function corsJson(req: Request, body: any, status = 200) {
       "Content-Type, Authorization, OpenAI-Beta, X-Requested-With",
     "Access-Control-Max-Age": "86400",
   });
-  if (ALLOWED.has(origin)) headers.set("Access-Control-Allow-Origin", origin);
-  return new Response(body == null ? null : JSON.stringify(body), { status, headers });
+  if (ALLOWED.has(origin)) h.set("Access-Control-Allow-Origin", origin);
+  return new Response(body == null ? null : JSON.stringify(body), { status, headers: h });
 }
 
-// ====== PRE-FLIGHT (OPTIONS) ======
+// ===== Preflight (CORS) =====
 export async function OPTIONS(req: NextRequest) {
-  return corsJson(req, null, 204); // responde SIEMPRE con CORS
+  return corsJson(req, null, 204);
 }
 
-// ====== POST: devuelve { client_secret, expires_after } ======
+// ===== POST: debe devolver { client_secret, expires_after } =====
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json().catch(() => ({}));
 
-    // 👇👇👇 PEGAR AQUÍ TU LÓGICA ACTUAL 👇👇👇
-    // Ejemplo: si ya tienes una función que genera el client_secret, úsala:
-    // const { client_secret, expires_after } = await createEphemeralKey(payload);
-    // ⛳ Reemplaza la línea de DEMO por tu código real:
+    // 🔽🔽🔽 TU LÓGICA REAL AQUÍ (usa tu OPENAI_API_KEY y tu WORKFLOW_ID) 🔽🔽🔽
+    // Ejemplo: const { client_secret, expires_after } = await createEphemeralKey(payload);
+    // Demo temporal (cámbialo por lo real)
     const { client_secret, expires_after } = await generateClientSecretDEMO();
-    // 👆👆👆 PEGAR AQUÍ TU LÓGICA ACTUAL 👆👆👆
+    // 🔼🔼🔼 TU LÓGICA REAL AQUÍ 🔼🔼🔼
 
     return corsJson(req, { client_secret, expires_after }, 200);
   } catch (err: any) {
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/** ❗ DEMO TEMPORAL: quítala cuando pegues tu lógica real */
+/** ❗ DEMO: quítala cuando pegues tu lógica real */
 async function generateClientSecretDEMO() {
   return {
     client_secret: "ek_demo_only_replace_with_real",
