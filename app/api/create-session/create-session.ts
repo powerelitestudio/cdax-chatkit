@@ -1,7 +1,7 @@
 // pages/api/create-session.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
-// Dominios permitidos
+// ✅ Dominios permitidos para CORS
 const ALLOWED = new Set<string>([
   "https://cartasdax.com",
   "https://www.cartasdax.com",
@@ -24,10 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method === "OPTIONS") {
-    // Preflight OK (sin cuerpo)
-    return res.status(204).end();
+    return res.status(204).end(); // preflight OK
   }
-
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
@@ -35,12 +33,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const payload = (typeof req.body === "string" ? JSON.parse(req.body) : req.body) || {};
 
-    // 👇 TU LÓGICA REAL AQUÍ:
+    // 👇👇👇 PEGAR AQUÍ TU LÓGICA ACTUAL 👇👇👇
     // const { client_secret, expires_after } = await createEphemeralKey(payload);
-
-    // --- DEMO reemplaza por tu lógica ---
-    const { client_secret, expires_after } = await generateClientSecretDemo();
-    // ------------------------------------
+    const { client_secret, expires_after } = await generateClientSecretDEMO();
+    // 👆👆👆 PEGAR AQUÍ TU LÓGICA ACTUAL 👆👆👆
 
     return res.status(200).json({ client_secret, expires_after });
   } catch (e: any) {
@@ -48,8 +44,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-/** 🔧 DEMO: quita esta función cuando uses tu lógica real */
-async function generateClientSecretDemo() {
+/** ❗ DEMO TEMPORAL: quítala cuando pegues tu lógica real */
+async function generateClientSecretDEMO() {
   return {
     client_secret: "ek_demo_only_replace_with_real",
     expires_after: Math.floor(Date.now() / 1000) + 60,
