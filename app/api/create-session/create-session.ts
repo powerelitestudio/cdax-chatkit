@@ -1,7 +1,6 @@
 // pages/api/create-session.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
-// ✅ Dominios permitidos para CORS
 const ALLOWED = new Set<string>([
   "https://cartasdax.com",
   "https://www.cartasdax.com",
@@ -23,20 +22,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader("Access-Control-Max-Age", "86400");
   res.setHeader("Cache-Control", "no-store");
 
-  if (req.method === "OPTIONS") {
-    return res.status(204).end(); // preflight OK
-  }
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
-  }
+  if (req.method === "OPTIONS") return res.status(204).end();
+  if (req.method !== "POST")  return res.status(405).json({ error: "Method Not Allowed" });
 
   try {
     const payload = (typeof req.body === "string" ? JSON.parse(req.body) : req.body) || {};
 
-    // 👇👇👇 PEGAR AQUÍ TU LÓGICA ACTUAL 👇👇👇
-    // const { client_secret, expires_after } = await createEphemeralKey(payload);
+    // 🔽🔽🔽 TU LÓGICA REAL AQUÍ (usa tu OPENAI_API_KEY y tu WORKFLOW_ID) 🔽🔽🔽
+    // Ejemplo: const { client_secret, expires_after } = await createEphemeralKey(payload);
+    // Demo temporal (cámbialo por lo real)
     const { client_secret, expires_after } = await generateClientSecretDEMO();
-    // 👆👆👆 PEGAR AQUÍ TU LÓGICA ACTUAL 👆👆👆
+    // 🔼🔼🔼 TU LÓGICA REAL AQUÍ 🔼🔼🔼
 
     return res.status(200).json({ client_secret, expires_after });
   } catch (e: any) {
@@ -44,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-/** ❗ DEMO TEMPORAL: quítala cuando pegues tu lógica real */
+/** ❗ DEMO: quítala cuando pegues tu lógica real */
 async function generateClientSecretDEMO() {
   return {
     client_secret: "ek_demo_only_replace_with_real",
