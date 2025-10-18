@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>DAX GPT · Demo (Diag)</title>
+  <title>DAX GPT · Demo (Diag paso a paso)</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -16,80 +16,85 @@
     .title{font-weight:700}.sub{color:#6b7280;font-size:12px}
     .body{height:78vh}
     .body openai-chatkit{display:block;width:100%;height:100%}
-    .dbg{padding:16px;font:500 14px/1.55 Inter,system-ui}
-    .dbg code{background:#f6f8fa;padding:2px 6px;border-radius:6px}
-    .bad{color:#b91c1c}.ok{color:#166534}
+    .log{padding:16px;border-top:1px dashed #e5e7eb;background:#fff;font:500 14px/1.55 Inter,system-ui}
+    .log div{margin:.2rem 0}
+    .bad{color:#b91c1c}.ok{color:#166534}.muted{color:#6b7280}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="hdr"><span class="dot"></span><div><div class="title">DAX GPT · Demo</div><div class="sub">(Versión Beta 0.1.0: Baby IA)</div></div></div>
     <div class="body"><div id="mount"></div></div>
+    <div class="log" id="log"></div>
   </div>
 
   <script type="module">
-    const mount = document.getElementById('mount');
+    const logBox = document.getElementById('log');
+    const mount  = document.getElementById('mount');
     const SESSION_ENDPOINT = '/api/create-session'; // mismo origen
 
-    function show(html){
-      mount.innerHTML = `<div class="dbg"><p class="bad"><strong>No pude iniciar DAX GPT.</strong></p>${html}</div>`;
-    }
+    const log = (msg, cls='') => logBox.insertAdjacentHTML('beforeend', `<div class="${cls}">${msg}</div>`);
 
-    // 1) Carga del web-component
-    try{
-      await import('https://cdn.jsdelivr.net/npm/@openai/chatkit/dist/web.js');
-    }catch(e){
-      show(`<p>Error cargando el web-component:</p><p><code>${String(e)}</code></p>`);
-      throw e;
-    }
+    (async function main(){
+      try{
+        log('1) Iniciando script…', 'muted');
 
-    // 2) Llama a create-session y muestra exactamente qué devuelve
-    let clientSecret;
-    try{
-      const r = await fetch(SESSION_ENDPOINT, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:'{}'
-      });
-      const raw = await r.text();
-      if(!r.ok){
-        show(`<p>Fallo en <code>POST ${SESSION_ENDPOINT}</code>: <code>${r.status}</code></p>
-              <p><code>${raw.replace(/</g,'&lt;')}</code></p>`);
-        throw new Error('create-session failed');
-      }
-      const data = JSON.parse(raw);
-      clientSecret = data.client_secret;
-      if(!clientSecret){
-        show(`<p>Respuesta sin <code>client_secret</code>.</p><p>JSON:</p><code>${raw.replace(/</g,'&lt;')}</code>`);
-        throw new Error('missing client_secret');
-      }
-    }catch(e){
-      console.error(e);
-      throw e;
-    }
-
-    // 3) Monta el chat
-    try{
-      const el = document.createElement('openai-chatkit');
-      el.setOptions({
-        api:{ async getClientSecret(){ return clientSecret } },
-        theme:{ colorScheme:"light", color:{ accent:{ primary:"#EF4C1D" } },
-                radius:"round", typography:{ fontFamily:"Inter, system-ui, sans-serif" } },
-        startScreen:{ greeting:"👋 Hola, soy DAX GPT. Demo embebida en Vercel." }
-      });
-      mount.innerHTML = ""; mount.appendChild(el);
-
-      // Watchdog: si no se pinta nada en 8s, muestra ayuda
-      setTimeout(()=>{
-        if(el.getBoundingClientRect().height < 50){
-          show(`<p>El componente no logró renderizar UI (altura baja).</p>
-                <p>Abre la consola (F12) y mira errores de red o CSP.</p>`);
+        // 1) Cargar el web-component
+        try{
+          await import('https://cdn.jsdelivr.net/npm/@openai/chatkit/dist/web.js');
+          log('2) Web component cargado ✅', 'ok');
+        }catch(e){
+          log('2) Error cargando web component ❌ → '+String(e), 'bad'); return;
         }
-      }, 8000);
-    }catch(e){
-      show(`<p>Excepción montando <code>&lt;openai-chatkit&gt;</code>:</p><p><code>${String(e)}</code></p>`);
-      throw e;
-    }
+
+        // 2) Llamar a create-session
+        let data;
+        try{
+          log('3) Pidiendo client_secret a '+SESSION_ENDPOINT+' …', 'muted');
+          const r = await fetch(SESSION_ENDPOINT, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:'{}'
+          });
+          const raw = await r.text();
+          log(`3.1) Respuesta HTTP: ${r.status}`, r.ok ? 'ok' : 'bad');
+          if(!r.ok){ log('<code>'+raw.replace(/</g,'&lt;')+'</code>', 'bad'); return; }
+          data = JSON.parse(raw);
+          if(!data.client_secret){
+            log('3.2) JSON sin client_secret ❌ → <code>'+raw.replace(/</g,'&lt;')+'</code>', 'bad'); return;
+          }
+          log('3.2) client_secret recibido ✅', 'ok');
+        }catch(e){
+          log('3) Excepción en fetch ❌ → '+String(e), 'bad'); return;
+        }
+
+        // 3) Montar el chat
+        try{
+          const el = document.createElement('openai-chatkit');
+          el.setOptions({
+            api:{ async getClientSecret(){ return data.client_secret } },
+            theme:{ colorScheme:"light",
+                    color:{ accent:{ primary:"#EF4C1D" } },
+                    radius:"round",
+                    typography:{ fontFamily:"Inter, system-ui, sans-serif" } },
+            startScreen:{ greeting:"👋 Hola, soy DAX GPT. Demo embebida en Vercel." }
+          });
+          mount.innerHTML = '';
+          mount.appendChild(el);
+          log('4) Componente añadido al DOM ✅', 'ok');
+
+          setTimeout(()=>{
+            const h = el.getBoundingClientRect().height|0;
+            if(h<50){ log('4.1) El componente no renderizó UI (altura '+h+'px). Revisa consola por errores.', 'bad'); }
+            else { log('4.1) UI renderizada (altura '+h+'px) ✅', 'ok'); }
+          }, 2000);
+        }catch(e){
+          log('4) Excepción montando componente ❌ → '+String(e), 'bad'); return;
+        }
+      }catch(e){
+        log('∑ Error inesperado: '+String(e), 'bad');
+      }
+    })();
   </script>
 </body>
 </html>
