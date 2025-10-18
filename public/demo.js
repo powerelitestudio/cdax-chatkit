@@ -1,4 +1,4 @@
-// DAX GPT demo - módulo externo con diagnóstico
+// DAX GPT demo - módulo externo con diagnóstico + fallbacks de carga
 const box   = document.getElementById('cdax-demo');
 const logEl = document.getElementById('log');
 const mount = document.getElementById('mount');
@@ -7,16 +7,38 @@ const ENDPOINT = box?.dataset?.endpoint || '/api/create-session';
 const log = (msg, cls='') =>
   logEl.insertAdjacentHTML('beforeend', `<div class="${cls}">${msg}</div>`);
 
+// intenta cargar el web component desde varias fuentes
+async function loadChatKit() {
+  const sources = [
+    // CDN 1
+    'https://cdn.jsdelivr.net/npm/@openai/chatkit@latest/dist/web.js',
+    // CDN 2
+    'https://unpkg.com/@openai/chatkit@latest/dist/web.js',
+    // Self-host (lo pondrás en /public/vendor/chatkit-web.js si los CDN fallan)
+    '/vendor/chatkit-web.js'
+  ];
+  const errs = [];
+  for (const src of sources) {
+    try {
+      await import(/* @vite-ignore */ src);
+      log(`2) Web component cargado desde <code>${src}</code> ✅`, 'ok');
+      return;
+    } catch (e) {
+      errs.push(`${src} → ${String(e)}`);
+    }
+  }
+  throw new Error('No se pudo cargar ChatKit desde ningún origen:\n' + errs.join('\n'));
+}
+
 (async function main(){
   try{
     log('1) Script cargado ✅', 'ok');
 
-    // 1) Cargar el web component
+    // 1) Cargar el web component con fallbacks
     try{
-      await import('https://cdn.jsdelivr.net/npm/@openai/chatkit/dist/web.js');
-      log('2) Web component cargado ✅', 'ok');
+      await loadChatKit();
     }catch(e){
-      log('2) Error cargando web component ❌ → '+String(e), 'bad');
+      log('2) Error cargando web component ❌<br><code>'+String(e).replace(/</g,'&lt;')+'</code>', 'bad');
       return;
     }
 
