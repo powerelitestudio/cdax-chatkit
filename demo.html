@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>DAX GPT · Demo</title>
+  <title>DAX GPT · Demo (Diag)</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -16,6 +16,9 @@
     .title{font-weight:700}.sub{color:#6b7280;font-size:12px}
     .body{height:78vh}
     .body openai-chatkit{display:block;width:100%;height:100%}
+    .dbg{padding:16px;font:500 14px/1.55 Inter,system-ui}
+    .dbg code{background:#f6f8fa;padding:2px 6px;border-radius:6px}
+    .bad{color:#b91c1c}.ok{color:#166534}
   </style>
 </head>
 <body>
@@ -25,36 +28,68 @@
   </div>
 
   <script type="module">
-    // Misma origin: podemos usar ruta relativa sin CORS ni plugins de WP
-    const SESSION_ENDPOINT = '/api/create-session';
+    const mount = document.getElementById('mount');
+    const SESSION_ENDPOINT = '/api/create-session'; // mismo origen
 
-    // Carga el web component
-    await import('https://cdn.jsdelivr.net/npm/@openai/chatkit/dist/web.js');
+    function show(html){
+      mount.innerHTML = `<div class="dbg"><p class="bad"><strong>No pude iniciar DAX GPT.</strong></p>${html}</div>`;
+    }
 
-    // Crea el componente y pide el client_secret al backend
-    const el = document.createElement('openai-chatkit');
-    el.setOptions({
-      api: {
-        async getClientSecret() {
-          const r = await fetch(SESSION_ENDPOINT, {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:'{}'
-          });
-          const data = await r.json();
-          return data.client_secret; // ek_...
+    // 1) Carga del web-component
+    try{
+      await import('https://cdn.jsdelivr.net/npm/@openai/chatkit/dist/web.js');
+    }catch(e){
+      show(`<p>Error cargando el web-component:</p><p><code>${String(e)}</code></p>`);
+      throw e;
+    }
+
+    // 2) Llama a create-session y muestra exactamente qué devuelve
+    let clientSecret;
+    try{
+      const r = await fetch(SESSION_ENDPOINT, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:'{}'
+      });
+      const raw = await r.text();
+      if(!r.ok){
+        show(`<p>Fallo en <code>POST ${SESSION_ENDPOINT}</code>: <code>${r.status}</code></p>
+              <p><code>${raw.replace(/</g,'&lt;')}</code></p>`);
+        throw new Error('create-session failed');
+      }
+      const data = JSON.parse(raw);
+      clientSecret = data.client_secret;
+      if(!clientSecret){
+        show(`<p>Respuesta sin <code>client_secret</code>.</p><p>JSON:</p><code>${raw.replace(/</g,'&lt;')}</code>`);
+        throw new Error('missing client_secret');
+      }
+    }catch(e){
+      console.error(e);
+      throw e;
+    }
+
+    // 3) Monta el chat
+    try{
+      const el = document.createElement('openai-chatkit');
+      el.setOptions({
+        api:{ async getClientSecret(){ return clientSecret } },
+        theme:{ colorScheme:"light", color:{ accent:{ primary:"#EF4C1D" } },
+                radius:"round", typography:{ fontFamily:"Inter, system-ui, sans-serif" } },
+        startScreen:{ greeting:"👋 Hola, soy DAX GPT. Demo embebida en Vercel." }
+      });
+      mount.innerHTML = ""; mount.appendChild(el);
+
+      // Watchdog: si no se pinta nada en 8s, muestra ayuda
+      setTimeout(()=>{
+        if(el.getBoundingClientRect().height < 50){
+          show(`<p>El componente no logró renderizar UI (altura baja).</p>
+                <p>Abre la consola (F12) y mira errores de red o CSP.</p>`);
         }
-      },
-      theme: {
-        colorScheme:"light",
-        color:{ accent:{ primary:"#EF4C1D" } },
-        radius:"round",
-        typography:{ fontFamily:"Inter, system-ui, sans-serif" }
-      },
-      startScreen:{ greeting:"👋 Hola, soy DAX GPT. Esta es la demo embebida en Vercel." }
-    });
-
-    document.getElementById('mount').appendChild(el);
+      }, 8000);
+    }catch(e){
+      show(`<p>Excepción montando <code>&lt;openai-chatkit&gt;</code>:</p><p><code>${String(e)}</code></p>`);
+      throw e;
+    }
   </script>
 </body>
 </html>
